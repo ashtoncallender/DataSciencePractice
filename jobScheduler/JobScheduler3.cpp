@@ -14,6 +14,7 @@ class Process {
         int priority;
         int completionTime;
         int firstTimeInQ;
+        int tempCpuBursts;
         bool operator == (const Process& p) const { return this->pid == p.pid && this->arrivalTime == p.arrivalTime && this->cpuBursts == p.cpuBursts && this->priority == p .priority; }
         bool operator != (const Process& p) const { return !operator==(p); }
 
@@ -31,6 +32,7 @@ class Process {
         this->arrivalTime = at;
         this->cpuBursts = cpu;
         this->priority = pri;
+        this->tempCpuBursts = cpu;
     }
 
     int getPID() {
@@ -138,7 +140,8 @@ class scheduler {
         return 0;
     };
 
-        void runStats() {
+
+    void runStats() {
         float tPut, turnaround, response;
 
         turnaround = 0.0f;
@@ -188,7 +191,7 @@ class scheduler {
                 //This selects a job and moves it to the run queue
                 //I moved the for loop inside so it wont run every single time
                 //Trying to be somewhat more efficent 
-                if (this->run.processList[0].pid == -1) {
+                if (this->run.processList[0].pid = -1) {
                     for (int i = 0; i < 25; i++) {
                         if(this->ready.processList[i].pid != -1) {
                             this->run.processList[0] = this->ready.processList[i];
@@ -263,7 +266,7 @@ class scheduler {
                         }
                     }
                 }
-                if (run.processList[0].firstTimeInQ = -1) {
+                if (run.processList[0].firstTimeInQ == -1) {
                     this->ready.processList[pTaken] = Process(-1,0,0,0);
                     this->run.processList[0].firstTimeInQ = t - run.processList[0].cpuBursts;
                 }
@@ -299,53 +302,45 @@ class scheduler {
         else if (this->type == "rr") {
             int runtime = getRuntime();
             int timeQ = 10;
-            int tempCpuBursts = 10;
-            bool flag = true;
+            int pos = 0;
 
             for (int t = 0; t <= runtime; t++) {
                 //Move all processes to ready Queue as time marches on
                 for (int i = 0; i < 25; i++) {
-                    if(this->newProcess.processList[i].arrivalTime == t) {
+                    if(this->newProcess.processList[i].arrivalTime == t && ready.position < 25) {
                         this->ready.processList[ready.position] = this->newProcess.processList[i];
-                        newProcess.processList[i] = Process(-1,0,0,0);
-                        ready.position++;
+                        this->newProcess.processList[i] = Process(-1,0,0,0);
+                        this->ready.position++;      
                     }
                 }
 
                 //Select a process to move to run Queue
-                if(this->run.processList[0].pid == -1) {
-                    
-                    for (int i = 0; i < 25; i++) {
-                        if ((ready.processList[i].pid != -1 && (tempCpuBursts != 0))) {
-                                run.processList[0] = ready.processList[i];
-                                ready.processList[i] = Process(-1,0,0,0);
-                                tempCpuBursts = run.processList[0].cpuBursts;
-                                if(flag) {
-                                    run.processList[0].firstTimeInQ = t;
-                                    flag = false;
-                                }
-                        }
+                for (int i = 0; i < 25; i++) {
+                    if(ready.processList[i].pid != -1) {
+                        this->run.processList[0] = ready.processList[i];
+                        this->run.processList[0].firstTimeInQ = t;
+                        break;
                     }
                 }
 
-                if (tempCpuBursts >= 0) {
-                    tempCpuBursts = tempCpuBursts - 1;
-                }
-
 
                 
-                if (tempCpuBursts <= 0) {
-                    run.processList[0].completionTime =  t + 1;
-                    complete.processList[complete.position] = run.processList[0];
-                    run.processList[0] = Process(-1,0,0,0);
-                    complete.position++;
-                    flag = true;
-                    tempCpuBursts = timeQ;
-                    
+                
+                this->run.processList[0].tempCpuBursts = run.processList[0].tempCpuBursts - 1;
+                timeQ = timeQ - 1;
+                if (this->run.processList[0].tempCpuBursts <= 0) {
+                    this->run.processList[0].completionTime = t;
+                    this->complete.processList[complete.position] = run.processList[0];
+                    this->run.processList[0] = Process(-1,0,0,0);
+                    this->complete.position++;
+                    timeQ = 10;
+                }
+                else if (timeQ == 0) {
+                    this->ready.processList[this->ready.position - 1] = this->run.processList[0];
+                    this->run.processList[0] = Process(-1,0,0,0);
+                    timeQ = 10;
                 }
                 
-                std::cout << "TempCPUBursts: " << tempCpuBursts << "\n";
-                std::cout << "t: " << t << "\n";
             }
             
             
@@ -388,7 +383,7 @@ class scheduler {
 
 //Main Program
 int main() { 
-    /*
+    
     scheduler fcfs = scheduler("fcfs", "./jobs.txt");
     fcfs.readFileContents();
     fcfs.schedulingSimulation();
@@ -397,9 +392,10 @@ int main() {
     std::cout << "Ready Queue: " << fcfs.ready.showList() << "\n";
     std::cout << "Run Queue: " << fcfs.run.showList() << fcfs.run.processList[0].cpuBursts  << " " << fcfs.run.processList[0].arrivalTime << "\n";
     fcfs.showProcessStats();
-    */
-
+    //fcfs.runStats();
     
+
+    /*
     scheduler sjf = scheduler("sjf", "./jobs.txt");
     sjf.readFileContents();
     sjf.schedulingSimulation();
@@ -408,15 +404,19 @@ int main() {
     std::cout << "Run Queue: " << sjf.run.showList() << sjf.run.processList[0].cpuBursts  << " " << sjf.run.processList[0].arrivalTime << "\n";
     sjf.showProcessStats();
     sjf.runStats();
-    
+    */
+
     /*
     scheduler rr = scheduler("rr", "./jobs.txt");
     rr.readFileContents();
     rr.schedulingSimulation();
     std::cout << "New Process Queue: " << rr.newProcess.showList() << "\n";
     std::cout << "Ready Queue: " << rr.ready.showList() << "\n";
-    std::cout << "Run Queue: " << rr.run.showList() << rr.run.processList[0].cpuBursts  << " " << rr.run.processList[0].arrivalTime << "\n";
+    std::cout << "Run Queue: " << rr.run.showList() << " cpu bursts: " << rr.run.processList[0].cpuBursts  << "   arrival time: " << rr.run.processList[0].arrivalTime << "   temp cpu bursts: " << rr.run.processList[0].tempCpuBursts <<"\n";
+    std::cout << "Complete Queue: " << rr.complete.showList() << "\n";
     rr.showProcessStats();
+    rr.runStats();
     */
+
     return 0;
 }
